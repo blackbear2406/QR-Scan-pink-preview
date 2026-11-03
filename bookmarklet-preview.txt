@@ -1,5 +1,5 @@
 javascript:(function(){
-if(window.__pinkpantherQR){window.__pinkpantherQR.open();return;}
+if(window.__pinkpantherQR){const old=document.getElementById("pinkpanther-qr-panel");if(old)old.remove();window.__pinkpantherQR=null;}
 const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedatabase.app";
 const $all=(root,sel)=>Array.from(root.querySelectorAll(sel));
 const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=="hidden"&&getComputedStyle(el).display!=="none");
@@ -32,11 +32,9 @@ const work=getWorkContext();
 if(!work){alert("ECG Panther: Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy mở lại cửa sổ sau khi bấm Tiếp nhận rồi chạy bookmarklet.");return;}
 const dialog=work.root;
 let patient=detectName(dialog);
-const entered=prompt("ECG Panther – xác nhận tên bệnh nhân để đặt tên ảnh.\nTên đọc được từ HIS (em có thể sửa nếu chưa đúng):",patient);
-if(entered===null||!entered.trim())return;
-patient=entered.trim();
+patient=String(patient||"").replace(/\\s+/g," ").trim();
 const safeName=cleanName(patient);
-if(!safeName){alert("Không thể tạo tên file an toàn từ tên bệnh nhân. Chưa mở QR.");return;}
+if(!safeName){alert("ECG Panther: Không tự đọc được tên bệnh nhân từ cửa sổ HIS. Để tránh đặt sai tên ảnh, QR chưa được mở. Hãy báo anh để bổ sung đúng vị trí trường tên trên HIS.");return;}
 let targets=fileTargets(dialog);
 if(!targets.length){alert("Đã nhận diện bệnh nhân: "+patient+"\nNhưng chưa tìm thấy ô tải ảnh trong cửa sổ ECG. Hãy mở phần tải/đính kèm ảnh rồi chạy lại bookmarklet.");return;}
 if(targets.length>1){
