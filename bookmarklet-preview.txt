@@ -1,5 +1,18 @@
 javascript:(function(){
-if(window.__pinkpantherQR){const old=document.getElementById("pinkpanther-qr-panel");if(old)old.remove();window.__pinkpantherQR=null;}
+if(window.__pinkpantherQR){if(typeof window.__pinkpantherQR.invalidate==="function")window.__pinkpantherQR.invalidate();else{const old=document.getElementById("pinkpanther-qr-panel");if(old)old.remove();window.__pinkpantherQR=null;}}
+if(!window.__pinkpantherPatientSwitchGuard){
+ window.__pinkpantherPatientSwitchGuard=true;
+ document.addEventListener("click",function(e){
+  const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
+  if(!target||target.closest("#pinkpanther-qr-panel"))return;
+  const row=target.closest("tr,[role='row'],.x-grid3-row,.ui-grid3-row");
+  if(!row)return;
+  const grid=row.closest("table,[role='grid'],.x-grid3,.ui-jqgrid,.ui-grid");
+  if(!grid)return;
+  const active=window.__pinkpantherQR;
+  if(active&&typeof active.invalidate==="function")active.invalidate();
+ },true);
+}
 const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedatabase.app";
 const $all=(root,sel)=>Array.from(root.querySelectorAll(sel));
 const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=="hidden"&&getComputedStyle(el).display!=="none");
@@ -85,6 +98,6 @@ async function start(){
 $("ppclose").onclick=()=>{cleanup();panel.remove();window.__pinkpantherQR=null;};
 $("pphide").onclick=()=>{panel.style.display="none";};
 $("ppnew").onclick=start;
-window.__pinkpantherQR={open:()=>{panel.style.display="block";}};
+window.__pinkpantherQR={open:()=>{panel.style.display="block";},invalidate:()=>{cleanup();panel.remove();window.__pinkpantherQR=null;}};
 start();
 })();
