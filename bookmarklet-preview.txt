@@ -5,12 +5,23 @@ if(!window.__pinkpantherPatientSwitchGuard){
  document.addEventListener("click",function(e){
   const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
   if(!target||target.closest("#pinkpanther-qr-panel"))return;
-  const row=target.closest("tr,[role='row'],.x-grid3-row,.ui-grid3-row");
+  const row=target.closest("#grdDanhSachCDHA tr[id]");
   if(!row)return;
-  const grid=row.closest("table,[role='grid'],.x-grid3,.ui-jqgrid,.ui-grid");
-  if(!grid)return;
-  const active=window.__pinkpantherQR;
-  if(active&&typeof active.invalidate==="function")active.invalidate();
+  const clickedRowId=row.id;
+  setTimeout(function(){
+   const active=window.__pinkpantherQR;
+   if(!active||typeof active.invalidate!=="function"||!active.patientId)return;
+   let nextPatientId="";
+   try{
+    const jq=window.jQuery;
+    const grid=jq&&jq("#grdDanhSachCDHA");
+    if(grid&&grid.length&&grid.jqGrid){
+     const data=grid.jqGrid("getRowData",clickedRowId)||{};
+     nextPatientId=String(data.BENHNHANID||data.BENHNHAN_ID||"").trim();
+    }
+   }catch(err){}
+   if(nextPatientId&&nextPatientId!==String(active.patientId))active.invalidate();
+  },0);
  },true);
 }
 const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedatabase.app";
@@ -42,6 +53,16 @@ const dialog=work.root;
 let patient=detectName(dialog);
 patient=String(patient||"").replace(/\s+/g," ").trim();
 const safeName=cleanName(patient);
+let patientId="";
+try{
+ const jq=window.jQuery;
+ const grid=jq&&jq("#grdDanhSachCDHA");
+ const selected=grid&&grid.length&&grid.jqGrid?grid.jqGrid("getGridParam","selrow"):null;
+ if(selected&&grid&&grid.length){
+  const data=grid.jqGrid("getRowData",selected)||{};
+  patientId=String(data.BENHNHANID||data.BENHNHAN_ID||"").trim();
+ }
+}catch(err){}
 if(!safeName){alert("ECG Panther: Không tự đọc được tên bệnh nhân từ cửa sổ HIS. Để tránh đặt sai tên ảnh, QR chưa được mở. Hãy báo anh để bổ sung đúng vị trí trường tên trên HIS.");return;}
 let targets=fileTargets(dialog);
 if(!targets.length){alert("Đã nhận diện bệnh nhân: "+patient+"\nNhưng chưa tìm thấy ô tải ảnh trong cửa sổ ECG. Hãy mở phần tải/đính kèm ảnh rồi chạy lại bookmarklet.");return;}
@@ -98,6 +119,6 @@ async function start(){
 $("ppclose").onclick=()=>{cleanup();panel.remove();window.__pinkpantherQR=null;};
 $("pphide").onclick=()=>{panel.style.display="none";};
 $("ppnew").onclick=start;
-window.__pinkpantherQR={open:()=>{panel.style.display="block";},invalidate:()=>{cleanup();panel.remove();window.__pinkpantherQR=null;}};
+window.__pinkpantherQR={patientId,open:()=>{panel.style.display="block";},invalidate:()=>{cleanup();if(session){fetch(DB+"/sessions/"+session+".json",{method:"DELETE"}).catch(()=>{});}panel.remove();window.__pinkpantherQR=null;}};
 start();
 })();
