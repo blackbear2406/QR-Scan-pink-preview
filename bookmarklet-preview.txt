@@ -58,7 +58,7 @@ function fileTargets(root){
  return $all(root,'input[type="file"]').filter(el=>!el.disabled);
 }
 const work=getWorkContext();
-if(!work){showPinkNotice("Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy tìm đúng nơi của HIS Panther rồi chạy lại bookmarklet.");return;}
+if(!work){showPinkNotice("Hãy tìm đúng nơi của HIS Panther");return;}
 const dialog=work.root;
 let patient=detectName(dialog);
 patient=String(patient||"").replace(/\s+/g," ").trim();
@@ -84,7 +84,7 @@ try{
  }
 }catch(err){}
 if(selectedPatientName&&cleanName(selectedPatientName)!==safeName){
- showPinkNotice("Bắt đầu tiếp nhận để tiếp tục");
+ showPinkNotice("Bắt đầu thực hiện để tiếp tục");
  return;
 }
 if(!safeName){alert("ECG Panther: Không tự đọc được tên bệnh nhân từ cửa sổ HIS. Để tránh đặt sai tên ảnh, QR chưa được mở. Hãy báo anh để bổ sung đúng vị trí trường tên trên HIS.");return;}
