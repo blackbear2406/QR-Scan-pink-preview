@@ -106,7 +106,7 @@ $("pppatient").textContent="Bệnh nhân: "+patient;
 function setmsg(t){$("ppmsg").textContent=t;}
 function cleanup(){if(source)source.close();clearInterval(fallbackTimer);clearTimeout(expiryTimer);}
 async function start(){
- cleanup();received=false;busy=false;
+ cleanup();if(session){try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}}received=false;busy=false;
  session="pink_"+Date.now()+"_"+Math.random().toString(36).slice(2,9);
  const phone="https://blackbear2406.github.io/QR-Scan-pink-preview/?session="+encodeURIComponent(session);
  $("ppqr").src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+encodeURIComponent(phone);
@@ -142,7 +142,7 @@ async function start(){
   else startFallback();
  }catch(e){startFallback();}
 }
-$("ppclose").onclick=()=>{cleanup();panel.remove();window.__pinkpantherQR=null;};
+$("ppclose").onclick=()=>{cleanup();if(session)fetch(DB+"/sessions/"+session+".json",{method:"DELETE",keepalive:true}).catch(()=>{});panel.remove();window.__pinkpantherQR=null;};
 $("pphide").onclick=()=>{panel.style.display="none";};
 $("ppnew").onclick=start;
 window.__pinkpantherQR={patientId,open:()=>{panel.style.display="block";},invalidate:()=>{cleanup();if(session){fetch(DB+"/sessions/"+session+".json",{method:"DELETE"}).catch(()=>{});}panel.remove();window.__pinkpantherQR=null;}};
