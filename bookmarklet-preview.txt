@@ -1,25 +1,90 @@
-javascript:(function(){ if(window.__pinkpantherQR){window.__pinkpantherQR.open();return;} const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedatabase.app"; let targets=[],session=null,timer=null,expiryTimer=null,observer=null,closed=false; const panel=document.createElement("div");panel.id="pinkpanther-qr-panel"; panel.style.cssText="position:fixed;z-index:2147483647;left:50%;top:42%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 28px));max-width:calc(100vw - 28px);box-sizing:border-box;padding:16px;background:#fff1f7;border:2px solid #f9a8d4;border-radius:18px;box-shadow:0 8px 30px #83184344;color:#831843;font:14px Arial,sans-serif"; panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px;color:#be185d">✨ QR-Scan Pink Panther</b><button id="ppclose" style="border:0;background:#fbcfe8;border-radius:9px;padding:5px 10px;cursor:pointer">✕</button></div><div id="ppmsg" style="margin:12px 0;text-align:center">Đang tạo mã QR...</div><img id="ppqr" style="display:block;width:220px;height:220px;object-fit:contain;margin:8px auto;border-radius:10px;background:white"><div style="font-size:12px;text-align:center;color:#9d174d">Mở camera điện thoại và quét mã để tải ảnh</div><div style="display:flex;gap:8px;margin-top:12px"><button id="ppnew" style="flex:1;background:#ec4899;color:white;border:0;border-radius:10px;padding:9px;cursor:pointer">Tạo QR mới</button><button id="pphide" style="flex:1;background:#fbcfe8;color:#831843;border:0;border-radius:10px;padding:9px;cursor:pointer">Ẩn</button></div>'; panel.querySelectorAll("*").forEach(el=>el.style.boxSizing="border-box"); const msg=panel.querySelector("#ppmsg");msg.style.cssText="margin:12px 0;text-align:center;line-height:1.4;overflow-wrap:anywhere;max-width:100%"; const qr=panel.querySelector("#ppqr");qr.style.cssText="display:block;width:min(220px,70vw);height:auto;aspect-ratio:1;object-fit:contain;margin:8px auto;border-radius:10px;background:white"; panel.querySelectorAll("#ppnew,#pphide").forEach(b=>{b.style.minWidth="0";b.style.whiteSpace="normal";b.style.lineHeight="1.3";}); panel.querySelector("b").style.cssText="font-size:16px;line-height:1.25;min-width:0;overflow-wrap:anywhere"; document.body.appendChild(panel); const $=id=>panel.querySelector("#"+id); function scan(doc){ try{ doc.querySelectorAll('input[type="file"]').forEach(el=>{if(!targets.includes(el))targets.push(el)}); const mo=new MutationObserver(()=>{try{doc.querySelectorAll('input[type="file"]').forEach(el=>{if(!targets.includes(el))targets.push(el)})}catch(e){}}); mo.observe(doc.documentElement,{childList:true,subtree:true});observer=mo; }catch(e){} } function scanAll(){targets=[];scan(document);document.querySelectorAll("iframe").forEach(f=>{try{if(f.contentDocument)scan(f.contentDocument)}catch(e){}})} function show(){panel.style.display="block"} function setmsg(t){$("ppmsg").textContent=t} async function start(){ clearInterval(timer);clearTimeout(expiryTimer);scanAll();session="pink_"+Date.now()+"_"+Math.random().toString(36).slice(2,9); const phone="https://blackbear2406.github.io/QR-Scan-pink-preview/?session="+encodeURIComponent(session); $("ppqr").src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+encodeURIComponent(phone); setmsg("Đang chờ ảnh từ điện thoại…"); try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"})}catch(e){} let busy=false,source=null,fallbackTimer=null,received=false;
-async function receive(data){
- if(busy||received||!data||(data.image==null&&data.url==null))return;
- busy=true;received=true;clearInterval(fallbackTimer);clearTimeout(expiryTimer);if(source){source.close();source=null}
- const detectedAt=Date.now(),latency=data.updatedAt?Math.max(0,detectedAt-Number(data.updatedAt)):null;
- try{
-  setmsg("✓ Ảnh đã đến máy tính"+(latency!==null?" · phát hiện sau "+(latency/1000).toFixed(2)+" giây":"")+" · đang tải ảnh…");
-  const downloadStarted=performance.now(),src=data.image||data.url,blob=await(await fetch(src)).blob(),downloadMs=Math.round(performance.now()-downloadStarted);
-  const file=new File([blob],"pinkpanther_"+Date.now()+".jpg",{type:blob.type||"image/jpeg"});
-  scanAll();let inserted=0;const insertStarted=performance.now();
-  for(const input of targets){try{if(!input.isConnected)continue;const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));inserted++}catch(e){}}
-  const insertMs=Math.round(performance.now()-insertStarted);
-  if(inserted){setmsg("✓ Đã đưa ảnh vào "+inserted+" ô tải tệp · tải ảnh "+downloadMs+" ms · gắn vào HIS "+insertMs+" ms. Đang đóng QR…");setTimeout(()=>{panel.remove();window.__pinkpantherQR=null},1800)}
-  else{received=false;setmsg("Đã nhận ảnh nhưng chưa tìm thấy ô tải tệp. Mở cửa sổ đính kèm trên HIS rồi bấm Tạo QR mới.");}
-  try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"})}catch(e){}
- }catch(e){received=false;setmsg("Lỗi nhận ảnh: "+e.message);startFallback()}
- finally{busy=false}
+javascript:(function(){
+if(window.__pinkpantherQR){window.__pinkpantherQR.open();return;}
+const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedatabase.app";
+const $all=(root,sel)=>Array.from(root.querySelectorAll(sel));
+const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=="hidden"&&getComputedStyle(el).display!=="none");
+const cleanName=s=>String(s||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/Đ/g,"D").replace(/đ/g,"d").toUpperCase().replace(/[^A-Z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,70);
+function getDialog(){
+ const ds=$all(document,'[role="dialog"],.modal.show,.modal.in,.ui-dialog,.modal-dialog,.bootbox');
+ return ds.filter(visible).sort((a,b)=>(b.innerText||"").length-(a.innerText||"").length)[0]||null;
 }
-function startFallback(){if(fallbackTimer||received)return;fallbackTimer=setInterval(async()=>{if(busy||received)return;try{const r=await fetch(DB+"/sessions/"+session+".json?ts="+Date.now(),{cache:"no-store"});if(r.ok)await receive(await r.json())}catch(e){}},1000)}
-expiryTimer=setTimeout(async()=>{if(source)source.close();clearInterval(fallbackTimer);try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"})}catch(e){}setmsg("Phiên QR đã hết hạn sau 10 phút. Hãy tạo QR mới.")},10*60*1000);
-try{
- if("EventSource" in window){source=new EventSource(DB+"/sessions/"+session+".json");source.addEventListener("put",e=>{try{const packet=JSON.parse(e.data);if(packet.path==="/"||packet.path==="")receive(packet.data)}catch(err){}});source.addEventListener("patch",e=>{try{const packet=JSON.parse(e.data);if(packet.path==="/"||packet.path==="")receive(packet.data)}catch(err){}});source.onerror=()=>{if(!received)startFallback()}}
- else startFallback();
-}catch(e){startFallback()}
-} $("ppclose").onclick=()=>{clearInterval(timer);clearTimeout(expiryTimer);panel.remove();window.__pinkpantherQR=null}; $("pphide").onclick=()=>{panel.style.display="none"}; $("ppnew").onclick=start; window.__pinkpantherQR={open:show}; start(); })();
+function detectName(root){
+ if(!root)return "";
+ const heads=$all(root,'.modal-title,.modal-header,.ui-dialog-titlebar,[role="heading"],h1,h2,h3,h4');
+ const texts=[...heads.map(x=>x.innerText||x.textContent||""),root.innerText||""];
+ for(const t0 of texts){
+  const t=t0.replace(/\\s+/g," ").trim();
+  let m=t.match(/(?:Tên(?: bệnh nhân)?|Họ và tên|Bệnh nhân)\\s*[:：]?\\s*([A-ZÀ-ỸĐ][A-ZÀ-ỸĐ'’ .-]{3,}?)(?=\\s*(?:[-–|,]\\s*\\d{1,3}\\s*tuổi|$))/i);
+  if(m){const v=m[1].trim().replace(/[|,:;-]+$/,"");if(v.split(/\\s+/).length>=2)return v;}
+  m=t.match(/([A-ZÀ-ỸĐ][A-ZÀ-ỸĐ'’ .]{3,})\\s*[-–|,]\\s*\\d{1,3}\\s*tuổi/i);
+  if(m&&m[1].trim().split(/\\s+/).length>=2)return m[1].trim();
+ }
+ return "";
+}
+function fileTargets(root){
+ if(!root)return [];
+ return $all(root,'input[type="file"]').filter(el=>!el.disabled);
+}
+const dialog=getDialog();
+if(!dialog){alert("ECG Panther: Không tìm thấy cửa sổ làm việc ECG đang mở. Em hãy vào màn hình ECG sau khi bấm Tiếp nhận rồi chạy lại bookmarklet.");return;}
+let patient=detectName(dialog);
+const entered=prompt("ECG Panther – xác nhận tên bệnh nhân để đặt tên ảnh.\nTên đọc được từ HIS (em có thể sửa nếu chưa đúng):",patient);
+if(entered===null||!entered.trim())return;
+patient=entered.trim();
+const safeName=cleanName(patient);
+if(!safeName){alert("Không thể tạo tên file an toàn từ tên bệnh nhân. Chưa mở QR.");return;}
+let targets=fileTargets(dialog);
+if(!targets.length){alert("Đã nhận diện bệnh nhân: "+patient+"\nNhưng chưa tìm thấy ô tải ảnh trong cửa sổ ECG. Hãy mở phần tải/đính kèm ảnh rồi chạy lại bookmarklet.");return;}
+if(targets.length>1){
+ const imageTargets=targets.filter(el=>/image|jpg|jpeg|png/i.test(el.accept||""));
+ if(imageTargets.length)targets=imageTargets;
+}
+if(targets.length!==1){alert("Có nhiều ô tải tệp trong cửa sổ ECG. Để tránh gắn nhầm, bookmarklet chưa mở QR. Cần xác định đúng ô tải ảnh.");return;}
+const input=targets[0];
+let session=null,expiryTimer=null,source=null,fallbackTimer=null,received=false,busy=false;
+const panel=document.createElement("div");panel.id="pinkpanther-qr-panel";
+panel.style.cssText="position:fixed;z-index:2147483647;left:50%;top:42%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 28px));box-sizing:border-box;padding:16px;background:#fff1f7;border:2px solid #f9a8d4;border-radius:18px;box-shadow:0 8px 30px #83184344;color:#831843;font:14px Arial,sans-serif";
+panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px;color:#be185d">✨ QR-Scan Pink Panther</b><button id="ppclose" style="border:0;background:#fbcfe8;border-radius:9px;padding:5px 10px;cursor:pointer">✕</button></div><div id="pppatient" style="margin:8px 0;text-align:center;font-weight:bold;overflow-wrap:anywhere"></div><div id="ppmsg" style="margin:10px 0;text-align:center;line-height:1.4">Đang tạo mã QR...</div><img id="ppqr" style="display:block;width:min(220px,70vw);height:auto;aspect-ratio:1;object-fit:contain;margin:8px auto;border-radius:10px;background:white"><div style="font-size:12px;text-align:center;color:#9d174d">Quét mã bằng điện thoại để gửi ảnh ECG</div><div style="display:flex;gap:8px;margin-top:12px"><button id="ppnew" style="flex:1;background:#ec4899;color:white;border:0;border-radius:10px;padding:9px;cursor:pointer">Tạo QR mới</button><button id="pphide" style="flex:1;background:#fbcfe8;color:#831843;border:0;border-radius:10px;padding:9px;cursor:pointer">Ẩn</button></div>';
+document.body.appendChild(panel);
+const $=id=>panel.querySelector("#"+id);
+$("pppatient").textContent="Bệnh nhân: "+patient;
+function setmsg(t){$("ppmsg").textContent=t;}
+function cleanup(){if(source)source.close();clearInterval(fallbackTimer);clearTimeout(expiryTimer);}
+async function start(){
+ cleanup();received=false;busy=false;
+ session="pink_"+Date.now()+"_"+Math.random().toString(36).slice(2,9);
+ const phone="https://blackbear2406.github.io/QR-Scan-pink-preview/?session="+encodeURIComponent(session);
+ $("ppqr").src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+encodeURIComponent(phone);
+ setmsg("Đang chờ ảnh từ điện thoại…");
+ try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}
+ async function receive(data){
+  if(busy||received||!data||(data.image==null&&data.url==null))return;
+  busy=true;received=true;cleanup();
+  try{
+   setmsg("✓ Đã nhận ảnh · đang chuyển vào HIS…");
+   const src=data.image||data.url,blob=await(await fetch(src)).blob();
+   const ext=(blob.type||"").includes("png")?"png":(blob.type||"").includes("webp")?"webp":"jpg";
+   const file=new File([blob],safeName+"_ECG."+ext,{type:blob.type||"image/jpeg"});
+   if(!input.isConnected||!dialog.isConnected){setmsg("Màn hình ECG đã thay đổi. Ảnh chưa được gắn để tránh đưa nhầm hồ sơ.");received=false;return;}
+   const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
+   input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
+   setmsg("✓ Đã chuyển ảnh vào ô tải tệp · "+file.name);
+   try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}
+  }catch(e){received=false;setmsg("Lỗi nhận ảnh: "+e.message);startFallback();}
+ }
+ function startFallback(){
+  if(fallbackTimer||received)return;
+  fallbackTimer=setInterval(async()=>{if(busy||received)return;try{const r=await fetch(DB+"/sessions/"+session+".json?ts="+Date.now(),{cache:"no-store"});if(r.ok)await receive(await r.json());}catch(e){}},1000);
+ }
+ expiryTimer=setTimeout(async()=>{cleanup();try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}setmsg("Phiên QR đã hết hạn sau 10 phút. Hãy tạo QR mới.");},600000);
+ try{
+  if("EventSource" in window){source=new EventSource(DB+"/sessions/"+session+".json");source.addEventListener("put",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.addEventListener("patch",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.onerror=()=>{if(!received)startFallback();};}
+  else startFallback();
+ }catch(e){startFallback();}
+}
+$("ppclose").onclick=()=>{cleanup();panel.remove();window.__pinkpantherQR=null;};
+$("pphide").onclick=()=>{panel.style.display="none";};
+$("ppnew").onclick=start;
+window.__pinkpantherQR={open:()=>{panel.style.display="block";}};
+start();
+})();
