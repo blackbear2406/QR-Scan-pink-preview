@@ -32,7 +32,7 @@ const work=getWorkContext();
 if(!work){alert("ECG Panther: Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy mở lại cửa sổ sau khi bấm Tiếp nhận rồi chạy bookmarklet.");return;}
 const dialog=work.root;
 let patient=detectName(dialog);
-const entered=prompt("ECG Panther – xác nhận tên bệnh nhân để đặt tên ảnh.\\nTên đọc được từ HIS (em có thể sửa nếu chưa đúng):",patient);
+const entered=prompt("ECG Panther – xác nhận tên bệnh nhân để đặt tên ảnh.\nTên đọc được từ HIS (em có thể sửa nếu chưa đúng):",patient);
 if(entered===null||!entered.trim())return;
 patient=entered.trim();
 const safeName=cleanName(patient);
