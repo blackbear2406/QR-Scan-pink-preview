@@ -13,6 +13,12 @@ function getWorkContext(){
 }
 function detectName(root){
  if(!root)return "";
+ const tab=root.querySelector("#tabTTBN");
+ if(tab){
+  const info=(tab.innerText||tab.textContent||"").replace(/\s+/g," ").trim();
+  const hit=info.match(/Tên bệnh nhân\s*:\s*(.+?)(?=\s*[-–|,]\s*(?:Tuổi|$))/i);
+  if(hit&&hit[1].trim().split(/\s+/).length>=2)return hit[1].trim();
+ }
  const heads=$all(root,'.modal-title,.modal-header,.ui-dialog-titlebar,[role="heading"],h1,h2,h3,h4');
  const texts=[...heads.map(x=>x.innerText||x.textContent||""),root.innerText||""];
  for(const t0 of texts){
@@ -32,7 +38,7 @@ const work=getWorkContext();
 if(!work){alert("ECG Panther: Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy mở lại cửa sổ sau khi bấm Tiếp nhận rồi chạy bookmarklet.");return;}
 const dialog=work.root;
 let patient=detectName(dialog);
-patient=String(patient||"").replace(/\\s+/g," ").trim();
+patient=String(patient||"").replace(/\s+/g," ").trim();
 const safeName=cleanName(patient);
 if(!safeName){alert("ECG Panther: Không tự đọc được tên bệnh nhân từ cửa sổ HIS. Để tránh đặt sai tên ảnh, QR chưa được mở. Hãy báo anh để bổ sung đúng vị trí trường tên trên HIS.");return;}
 let targets=fileTargets(dialog);
