@@ -28,6 +28,16 @@ const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedataba
 const $all=(root,sel)=>Array.from(root.querySelectorAll(sel));
 const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=="hidden"&&getComputedStyle(el).display!=="none");
 const cleanName=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/Đ/g,"D").replace(/đ/g,"d").toUpperCase().replace(/[^A-Z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,70);
+function showPinkNotice(message){
+ const old=document.getElementById("pinkpanther-notice");if(old)old.remove();
+ const overlay=document.createElement("div");overlay.id="pinkpanther-notice";
+ overlay.style.cssText="position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(80,35,58,.16)";
+ const card=document.createElement("div");card.style.cssText="width:min(390px,100%);box-sizing:border-box;padding:20px;background:#fff8fb;border:1px solid #f4c6d9;border-radius:18px;box-shadow:0 12px 36px rgba(131,24,67,.16);color:#684456;font:14px/1.55 Arial,sans-serif;text-align:center";
+ const title=document.createElement("div");title.textContent="ECG Panther";title.style.cssText="font-size:17px;font-weight:700;color:#c06b91;margin-bottom:10px";
+ const body=document.createElement("div");body.textContent=message;body.style.cssText="white-space:normal;overflow-wrap:anywhere";
+ const button=document.createElement("button");button.type="button";button.textContent="Đóng";button.style.cssText="margin-top:16px;padding:8px 22px;border:0;border-radius:10px;background:#f6dce8;color:#8d4b68;font-weight:600;cursor:pointer";button.onclick=()=>overlay.remove();
+ card.append(title,body,button);overlay.appendChild(card);document.body.appendChild(overlay);
+}
 function getWorkContext(){
  const frame=document.getElementById("dlgSuaKetQuaifmView");
  if(frame){try{const doc=frame.contentDocument||frame.contentWindow.document;if(doc&&doc.body)return {root:doc.body,doc,frame};}catch(e){}}
@@ -48,7 +58,7 @@ function fileTargets(root){
  return $all(root,'input[type="file"]').filter(el=>!el.disabled);
 }
 const work=getWorkContext();
-if(!work){alert("ECG Panther: Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy mở lại cửa sổ sau khi bấm Tiếp nhận rồi chạy bookmarklet.");return;}
+if(!work){showPinkNotice("Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy tìm đúng nơi của HIS Panther rồi chạy lại bookmarklet.");return;}
 const dialog=work.root;
 let patient=detectName(dialog);
 patient=String(patient||"").replace(/\s+/g," ").trim();
@@ -74,7 +84,7 @@ try{
  }
 }catch(err){}
 if(selectedPatientName&&cleanName(selectedPatientName)!==safeName){
- alert("ECG Panther: Danh sách HIS đang chọn bệnh nhân "+selectedPatientName+" nhưng cửa sổ ECG vẫn là hồ sơ cũ ("+patient+"). QR cũ không được tạo lại. Hãy nhấn Tiếp nhận để cập nhật cửa sổ ECG.");
+ showPinkNotice("Bắt đầu tiếp nhận để tiếp tục");
  return;
 }
 if(!safeName){alert("ECG Panther: Không tự đọc được tên bệnh nhân từ cửa sổ HIS. Để tránh đặt sai tên ảnh, QR chưa được mở. Hãy báo anh để bổ sung đúng vị trí trường tên trên HIS.");return;}
