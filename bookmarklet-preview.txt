@@ -63,6 +63,20 @@ try{
   patientId=String(data.BENHNHANID||data.BENHNHAN_ID||"").trim();
  }
 }catch(err){}
+let selectedPatientName="";
+try{
+ const jq=window.jQuery;
+ const grid=jq&&jq("#grdDanhSachCDHA");
+ const selected=grid&&grid.length&&grid.jqGrid?grid.jqGrid("getGridParam","selrow"):null;
+ if(selected&&grid){
+  const rowData=grid.jqGrid("getRowData",selected)||{};
+  selectedPatientName=String(rowData.TENBENHNHAN||"").replace(/\\s+/g," ").trim();
+ }
+}catch(err){}
+if(selectedPatientName&&cleanName(selectedPatientName)!==safeName){
+ alert("ECG Panther: Danh sách HIS đang chọn bệnh nhân "+selectedPatientName+" nhưng cửa sổ ECG vẫn là hồ sơ cũ ("+patient+"). QR cũ không được tạo lại. Hãy nhấn Tiếp nhận để cập nhật cửa sổ ECG.");
+ return;
+}
 if(!safeName){alert("ECG Panther: Không tự đọc được tên bệnh nhân từ cửa sổ HIS. Để tránh đặt sai tên ảnh, QR chưa được mở. Hãy báo anh để bổ sung đúng vị trí trường tên trên HIS.");return;}
 let targets=fileTargets(dialog);
 if(!targets.length){alert("Đã nhận diện bệnh nhân: "+patient+"\nNhưng chưa tìm thấy ô tải ảnh trong cửa sổ ECG. Hãy mở phần tải/đính kèm ảnh rồi chạy lại bookmarklet.");return;}
