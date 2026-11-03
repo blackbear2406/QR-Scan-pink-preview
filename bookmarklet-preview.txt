@@ -70,7 +70,7 @@ try{
  const selected=grid&&grid.length&&grid.jqGrid?grid.jqGrid("getGridParam","selrow"):null;
  if(selected&&grid){
   const rowData=grid.jqGrid("getRowData",selected)||{};
-  selectedPatientName=String(rowData.TENBENHNHAN||"").replace(/\\s+/g," ").trim();
+  selectedPatientName=String(rowData.TENBENHNHAN||"").replace(/\s+/g," ").trim();
  }
 }catch(err){}
 if(selectedPatientName&&cleanName(selectedPatientName)!==safeName){
