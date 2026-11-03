@@ -4,9 +4,12 @@ const DB="https://qr-scan-pinkpanter-default-rtdb.asia-southeast1.firebasedataba
 const $all=(root,sel)=>Array.from(root.querySelectorAll(sel));
 const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=="hidden"&&getComputedStyle(el).display!=="none");
 const cleanName=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/Đ/g,"D").replace(/đ/g,"d").toUpperCase().replace(/[^A-Z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,70);
-function getDialog(){
+function getWorkContext(){
+ const frame=document.getElementById("dlgSuaKetQuaifmView");
+ if(frame){try{const doc=frame.contentDocument||frame.contentWindow.document;if(doc&&doc.body)return {root:doc.body,doc,frame};}catch(e){}}
  const ds=$all(document,'[role="dialog"],.modal.show,.modal.in,.ui-dialog,.modal-dialog,.bootbox');
- return ds.filter(visible).sort((a,b)=>(b.innerText||"").length-(a.innerText||"").length)[0]||null;
+ const root=ds.filter(visible).sort((a,b)=>(b.innerText||"").length-(a.innerText||"").length)[0]||null;
+ return root?{root,doc:document,frame:null}:null;
 }
 function detectName(root){
  if(!root)return "";
@@ -25,10 +28,11 @@ function fileTargets(root){
  if(!root)return [];
  return $all(root,'input[type="file"]').filter(el=>!el.disabled);
 }
-const dialog=getDialog();
-if(!dialog){alert("ECG Panther: Không tìm thấy cửa sổ làm việc ECG đang mở. Em hãy vào màn hình ECG sau khi bấm Tiếp nhận rồi chạy lại bookmarklet.");return;}
+const work=getWorkContext();
+if(!work){alert("ECG Panther: Không tìm thấy cửa sổ Kết quả chẩn đoán. Hãy mở lại cửa sổ sau khi bấm Tiếp nhận rồi chạy bookmarklet.");return;}
+const dialog=work.root;
 let patient=detectName(dialog);
-const entered=prompt("ECG Panther – xác nhận tên bệnh nhân để đặt tên ảnh.\nTên đọc được từ HIS (em có thể sửa nếu chưa đúng):",patient);
+const entered=prompt("ECG Panther – xác nhận tên bệnh nhân để đặt tên ảnh.\\nTên đọc được từ HIS (em có thể sửa nếu chưa đúng):",patient);
 if(entered===null||!entered.trim())return;
 patient=entered.trim();
 const safeName=cleanName(patient);
