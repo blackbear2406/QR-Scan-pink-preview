@@ -58,7 +58,7 @@ function fileTargets(root){
  return $all(root,'input[type="file"]').filter(el=>!el.disabled);
 }
 const work=getWorkContext();
-if(!work){showPinkNotice("Hãy tìm đúng nơi của HIS Panther");return;}
+if(!work){return;}
 const dialog=work.root;
 let patient=detectName(dialog);
 patient=String(patient||"").replace(/\s+/g," ").trim();
