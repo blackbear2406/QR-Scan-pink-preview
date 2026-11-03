@@ -134,7 +134,9 @@ async function start(){
   if(fallbackTimer||received)return;
   fallbackTimer=setInterval(async()=>{if(busy||received)return;try{const r=await fetch(DB+"/sessions/"+session+".json?ts="+Date.now(),{cache:"no-store"});if(r.ok)await receive(await r.json());}catch(e){}},1000);
  }
- expiryTimer=setTimeout(async()=>{cleanup();try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}setmsg("Phiên QR đã hết hạn sau 10 phút. Hãy tạo QR mới.");},600000);
+ expiryTimer=setTimeout(async()=>{cleanup();try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE",keepalive:true});}catch(e){}setmsg("Phiên QR đã hết hạn sau 10 phút. Hãy tạo QR mới.");},600000);
+ const expireSession=()=>{if(session)fetch(DB+"/sessions/"+session+".json",{method:"DELETE",keepalive:true}).catch(()=>{});};
+ window.addEventListener("pagehide",expireSession,{once:true});
  try{
   if("EventSource" in window){source=new EventSource(DB+"/sessions/"+session+".json");source.addEventListener("put",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.addEventListener("patch",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.onerror=()=>{if(!received)startFallback();};}
   else startFallback();
