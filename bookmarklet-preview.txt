@@ -118,79 +118,17 @@ async function start(){
   try{
    setmsg("✓ Đã nhận ảnh · đang chuyển vào HIS…");
    const src=data.image||data.url,blob=await(await fetch(src)).blob();
-   const mime=(blob.type||"").toLowerCase();
-   const ext=mime.includes("png")?"png":mime.includes("bmp")?"bmp":(mime.includes("jpeg")||mime.includes("jpg"))?"jpg":"";
-   if(!ext)throw new Error("Định dạng ảnh không được HIS hỗ trợ. Chỉ nhận JPG, PNG hoặc BMP.");
+   const ext=(blob.type||"").includes("png")?"png":(blob.type||"").includes("webp")?"webp":"jpg";
    const file=new File([blob],safeName+"_ECG."+ext,{type:blob.type||"image/jpeg"});
    if(!input.isConnected||!dialog.isConnected){setmsg("Màn hình ECG đã thay đổi. Ảnh chưa được gắn để tránh đưa nhầm hồ sơ.");received=false;return;}
    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
    input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
+   setmsg("✓ Đã chuyển ảnh vào ô tải tệp · "+file.name);
    try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}
    cleanup();
-   const doc=work.doc,win=doc.defaultView,jq=win&&win.jQuery;
-   const uploadButton=dialog.querySelector("#btnUpload");
-   const uploadForm=dialog.querySelector("#formUpload");
-   if(!jq||!jq.fn||typeof jq.fn.ajaxForm!=="function"||!uploadButton||!uploadForm){
-    setmsg("Ảnh đã gắn vào HIS nhưng không xác định được cơ chế Upload tự động. Em có thể bấm Upload thủ công.");
-    busy=false;return;
-   }
-   if(window.__pinkpantherUploadBusy){
-    setmsg("Đang có một lượt Upload khác. Ảnh đã gắn vào HIS, chưa gửi lần thứ hai.");
-    busy=false;return;
-   }
-   window.__pinkpantherUploadBusy=true;
-   setmsg("Ảnh đã gắn · đang tải lên HIS…");
-   let settle;
-   const resultPromise=new Promise(resolve=>{settle=resolve;});
-   const originalAjaxForm=jq.fn.ajaxForm;
-   let wrapped=false;
-   jq.fn.ajaxForm=function(opts){
-    if(this&&this.attr&&this.attr("id")==="formUpload"&&opts&&typeof opts==="object"&&!wrapped){
-     wrapped=true;
-     const originalSuccess=opts.success;
-     const originalError=opts.error;
-     opts.success=function(response,...args){
-      try{if(typeof originalSuccess==="function")originalSuccess.apply(this,[response,...args]);}
-      finally{settle({kind:"success",response});}
-     };
-     if(typeof originalError==="function"){
-      opts.error=function(...args){
-       try{originalError.apply(this,args);}
-       finally{settle({kind:"error",args});}
-      };
-     }
-    }
-    return originalAjaxForm.apply(this,arguments);
-   };
-   try{uploadButton.click();}
-   finally{jq.fn.ajaxForm=originalAjaxForm;}
-   if(!wrapped){
-    window.__pinkpantherUploadBusy=false;
-    setmsg("Không bắt được callback Upload của HIS. Ảnh vẫn nằm trong ô tải tệp; em hãy kiểm tra và bấm Upload thủ công.");
-    busy=false;return;
-   }
-   const outcome=await Promise.race([
-    resultPromise,
-    new Promise(resolve=>setTimeout(()=>resolve({kind:"timeout"}),45000))
-   ]);
-   window.__pinkpantherUploadBusy=false;
-   if(outcome.kind==="success"&&outcome.response&&outcome.response.id&&outcome.response.url){
-    setmsg("✓ HIS đã nhận ảnh: "+(outcome.response.name||file.name)+" · mã tệp "+outcome.response.id);
-    window.__pinkpantherQR=null;
-    setTimeout(()=>{if(panel.isConnected)panel.remove();},2500);
-   }else if(outcome.kind==="error"){
-    setmsg("HIS báo lỗi khi tải ảnh. Tệp vẫn được giữ trong ô tải; kiểm tra trước khi thử lại để tránh trùng.");
-    busy=false;
-   }else{
-    setmsg("Chưa nhận được xác nhận từ HIS sau 45 giây. Kiểm tra danh sách ảnh trước khi bấm Upload lại để tránh trùng.");
-    busy=false;
-   }
-  }catch(e){
-   window.__pinkpantherUploadBusy=false;
-   received=false;busy=false;
-   setmsg("Lỗi nhận hoặc tải ảnh: "+e.message);
-   startFallback();
-  }
+   window.__pinkpantherQR=null;
+   panel.remove();
+  }catch(e){received=false;setmsg("Lỗi nhận ảnh: "+e.message);startFallback();}
  }
  function startFallback(){
   if(fallbackTimer||received)return;
