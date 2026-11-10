@@ -117,13 +117,13 @@ async function start(){
   busy=true;received=true;cleanup();
   try{
    setmsg("✓ Đã nhận ảnh · đang chuyển vào HIS…");
-   const src=data.image||data.url,blob=await(await fetch(src)).blob();
+   const src=data.image||data.url;let blob;if(typeof src==="string"&&src.startsWith("data:")){const comma=src.indexOf(",");if(comma<0)throw new Error("Dữ liệu ảnh không hợp lệ");const head=src.slice(0,comma),raw=atob(src.slice(comma+1)),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);const mime=(head.match(/^data:([^;]+)/)||[])[1]||"image/jpeg";blob=new Blob([bytes],{type:mime});}else{const imageResponse=await fetch(src);if(!imageResponse.ok)throw new Error("Không tải được ảnh từ Firebase ("+imageResponse.status+")");blob=await imageResponse.blob();}
    const ext=(blob.type||"").includes("png")?"png":(blob.type||"").includes("webp")?"webp":"jpg";
    const file=new File([blob],safeName+"_ECG."+ext,{type:blob.type||"image/jpeg"});
    if(!input.isConnected||!dialog.isConnected){setmsg("Màn hình ECG đã thay đổi. Ảnh chưa được gắn để tránh đưa nhầm hồ sơ.");received=false;return;}
    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
    input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
-   setmsg("✓ Đã chuyển ảnh vào ô tải tệp · "+file.name);
+   setmsg("✓ Đã chuyển ảnh vào ô tải tệp · "+file.name+" · "+(file.size/1024/1024).toFixed(2)+" MB");
    try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE"});}catch(e){}
    cleanup();
    window.__pinkpantherQR=null;
@@ -132,13 +132,14 @@ async function start(){
  }
  function startFallback(){
   if(fallbackTimer||received)return;
-  fallbackTimer=setInterval(async()=>{if(busy||received)return;try{const r=await fetch(DB+"/sessions/"+session+".json?ts="+Date.now(),{cache:"no-store"});if(r.ok)await receive(await r.json());}catch(e){}},1000);
+  let polling=false;
+  fallbackTimer=setInterval(async()=>{if(polling||busy||received)return;polling=true;try{const r=await fetch(DB+"/sessions/"+session+".json?ts="+Date.now(),{cache:"no-store"});if(r.ok)await receive(await r.json());}catch(e){}finally{polling=false;}},3000);
  }
  expiryTimer=setTimeout(async()=>{cleanup();try{await fetch(DB+"/sessions/"+session+".json",{method:"DELETE",keepalive:true});}catch(e){}setmsg("Phiên QR đã hết hạn sau 10 phút. Hãy tạo QR mới.");},600000);
  const expireSession=()=>{if(session)fetch(DB+"/sessions/"+session+".json",{method:"DELETE",keepalive:true}).catch(()=>{});};
  window.addEventListener("pagehide",expireSession,{once:true});
  try{
-  if("EventSource" in window){source=new EventSource(DB+"/sessions/"+session+".json");source.addEventListener("put",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.addEventListener("patch",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.onerror=()=>{if(!received)startFallback();};}
+  if("EventSource" in window){source=new EventSource(DB+"/sessions/"+session+".json");source.onopen=()=>{if(fallbackTimer){clearInterval(fallbackTimer);fallbackTimer=null;}};source.addEventListener("put",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.addEventListener("patch",e=>{try{const p=JSON.parse(e.data);if(p.path==="/"||p.path==="")receive(p.data);}catch(err){}});source.onerror=()=>{if(!received)startFallback();};}
   else startFallback();
  }catch(e){startFallback();}
 }
