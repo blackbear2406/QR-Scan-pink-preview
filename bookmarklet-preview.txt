@@ -118,8 +118,23 @@ async function start(){
   try{
    setmsg("✓ Đã nhận ảnh · đang chuyển vào HIS…");
    const src=data.image||data.url;let blob;if(typeof src==="string"&&src.startsWith("data:")){const comma=src.indexOf(",");if(comma<0)throw new Error("Dữ liệu ảnh không hợp lệ");const head=src.slice(0,comma),raw=atob(src.slice(comma+1)),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);const mime=(head.match(/^data:([^;]+)/)||[])[1]||"image/jpeg";blob=new Blob([bytes],{type:mime});}else{const imageResponse=await fetch(src);if(!imageResponse.ok)throw new Error("Không tải được ảnh từ Firebase ("+imageResponse.status+")");blob=await imageResponse.blob();}
-   const ext=(blob.type||"").includes("png")?"png":(blob.type||"").includes("webp")?"webp":"jpg";
-   const file=new File([blob],safeName+"_ECG."+ext,{type:blob.type||"image/jpeg"});
+   // Light JPEG compression at original dimensions; fall back to original if not smaller.
+   let uploadBlob=blob;
+   if(blob.size>1024*1024&&/^image\/(jpeg|png|webp)$/i.test(blob.type||"")){
+    try{
+     const bitmap=await createImageBitmap(blob);
+     const canvas=document.createElement("canvas");
+     canvas.width=bitmap.width;canvas.height=bitmap.height;
+     const ctx=canvas.getContext("2d",{alpha:false});
+     ctx.drawImage(bitmap,0,0);
+     if(bitmap.close)bitmap.close();
+     const compressed=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",0.94));
+     canvas.width=0;canvas.height=0;
+     if(compressed&&compressed.size<blob.size*0.95)uploadBlob=compressed;
+    }catch(compressError){console.warn("ECG Panther: giữ ảnh gốc vì không nén được",compressError);}
+   }
+   const ext=(uploadBlob.type||"").includes("png")?"png":(uploadBlob.type||"").includes("webp")?"webp":"jpg";
+   const file=new File([uploadBlob],safeName+"_ECG."+ext,{type:uploadBlob.type||"image/jpeg"});
    if(!input.isConnected||!dialog.isConnected){setmsg("Màn hình ECG đã thay đổi. Ảnh chưa được gắn để tránh đưa nhầm hồ sơ.");received=false;return;}
    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
    input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
