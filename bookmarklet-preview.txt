@@ -39,11 +39,42 @@ function showPinkNotice(message){
  card.append(title,body,button);overlay.appendChild(card);document.body.appendChild(overlay);
 }
 function getWorkContext(){
- const frame=document.getElementById("dlgSuaKetQuaifmView");
- if(frame){try{const doc=frame.contentDocument||frame.contentWindow.document;if(doc&&doc.body)return {root:doc.body,doc,frame};}catch(e){}}
- const ds=$all(document,'[role="dialog"],.modal.show,.modal.in,.ui-dialog,.modal-dialog,.bootbox');
- const root=ds.filter(visible).sort((a,b)=>(b.innerText||"").length-(a.innerText||"").length)[0]||null;
- return root?{root,doc:document,frame:null}:null;
+ const docs=[];
+ const seen=new Set();
+ function scan(doc,frame,depth){
+  if(!doc||seen.has(doc)||depth>5)return;
+  seen.add(doc);docs.push({doc,frame});
+  let frames=[];
+  try{frames=Array.from(doc.querySelectorAll("iframe"));}catch(e){}
+  for(const childFrame of frames){
+   try{const childDoc=childFrame.contentDocument||childFrame.contentWindow.document;if(childDoc&&childDoc.body)scan(childDoc,childFrame,depth+1);}catch(e){}
+  }
+ }
+ scan(document,null,0);
+ // Ưu tiên iframe kết quả ECG quen thuộc.
+ for(const item of docs){
+  if(item.frame&&item.frame.id==="dlgSuaKetQuaifmView"&&item.doc.body){
+   return {root:item.doc.body,doc:item.doc,frame:item.frame};
+  }
+ }
+ // Tìm tài liệu iframe có đồng thời thông tin bệnh nhân và ô tải ảnh.
+ for(const item of docs){
+  try{
+   const body=item.doc.body;
+   if(body&&body.querySelector("#tabTTBN")&&body.querySelector('input[type="file"]')){
+    return {root:body,doc:item.doc,frame:item.frame};
+   }
+  }catch(e){}
+ }
+ // Dự phòng: hộp thoại nhìn thấy trong từng tài liệu.
+ for(const item of docs){
+  try{
+   const ds=$all(item.doc,'[role="dialog"],.modal.show,.modal.in,.ui-dialog,.modal-dialog,.bootbox');
+   const root=ds.filter(visible).filter(el=>el.querySelector("#tabTTBN")&&el.querySelector('input[type="file"]')).sort((a,b)=>(b.innerText||"").length-(a.innerText||"").length)[0]||null;
+   if(root)return {root,doc:item.doc,frame:item.frame};
+  }catch(e){}
+ }
+ return null;
 }
 function detectName(root){
  if(!root)return "";
@@ -57,8 +88,12 @@ function fileTargets(root){
  if(!root)return [];
  return $all(root,'input[type="file"]').filter(el=>!el.disabled);
 }
-const work=getWorkContext();
-if(!work){return;}
+let work=null;
+try{work=getWorkContext();}catch(contextError){console.error("ECG Panther context detection:",contextError);}
+if(!work){
+ showPinkNotice("Không tìm thấy cửa sổ Kết quả ECG hoặc ô tải ảnh. Em hãy mở đầy đủ cửa sổ Kết quả chẩn đoán, chờ nội dung tải xong rồi bấm bookmarklet lại. Nếu cửa sổ đang nằm trong iframe khác, phiên bản này sẽ tự dò các iframe cùng tên miền.");
+ return;
+}
 const dialog=work.root;
 let patient=detectName(dialog);
 patient=String(patient||"").replace(/\s+/g," ").trim();
