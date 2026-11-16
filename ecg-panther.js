@@ -101,7 +101,7 @@ function fileTargets(root){
 let work=null;
 try{work=getWorkContext();}catch(contextError){console.error("ECG Panther context detection:",contextError);}
 if(!work){
- showPinkNotice("Không tìm thấy cửa sổ Kết quả ECG hoặc ô tải ảnh. Em hãy mở đầy đủ cửa sổ Kết quả chẩn đoán, chờ nội dung tải xong rồi bấm bookmarklet lại. Nếu cửa sổ đang nằm trong iframe khác, phiên bản này sẽ tự dò các iframe cùng tên miền.");
+ showPinkNotice("Sai thao tác");
  return;
 }
 const dialog=work.root;
