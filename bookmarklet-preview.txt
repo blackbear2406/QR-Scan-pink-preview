@@ -41,6 +41,15 @@ function showPinkNotice(message){
 function getWorkContext(){
  const docs=[];
  const seen=new Set();
+ // Bookmarklet có thể chạy trong iframe đang được focus; đi ngược lên các frame cha trước.
+ let hostDoc=document;
+ try{
+  let w=window;
+  for(let i=0;i<6;i++){
+   if(!w.parent||w.parent===w)break;
+   try{const pd=w.parent.document;if(!pd||!pd.body)break;hostDoc=pd;w=w.parent;}catch(e){break;}
+  }
+ }catch(e){}
  function scan(doc,frame,depth){
   if(!doc||seen.has(doc)||depth>5)return;
   seen.add(doc);docs.push({doc,frame});
@@ -50,19 +59,20 @@ function getWorkContext(){
    try{const childDoc=childFrame.contentDocument||childFrame.contentWindow.document;if(childDoc&&childDoc.body)scan(childDoc,childFrame,depth+1);}catch(e){}
   }
  }
- scan(document,null,0);
+ scan(hostDoc,null,0);
+ if(hostDoc!==document)scan(document,window.frameElement||null,0);
  // Ưu tiên iframe kết quả ECG quen thuộc.
  for(const item of docs){
-  if(item.frame&&item.frame.id==="dlgSuaKetQuaifmView"&&item.doc.body){
-   return {root:item.doc.body,doc:item.doc,frame:item.frame};
+  if(item.frame&&item.frame.id==="dlgSuaKetQuaifmView"&&item.doc.body&&item.doc.querySelector("#tabTTBN")&&item.doc.querySelector('input[type="file"]')){
+   return {root:item.doc.body,doc:item.doc,frame:item.frame,hostDoc};
   }
  }
- // Tìm tài liệu iframe có đồng thời thông tin bệnh nhân và ô tải ảnh.
+ // Nếu bookmarklet được chạy ngay bên trong iframe kết quả ECG.
  for(const item of docs){
   try{
    const body=item.doc.body;
    if(body&&body.querySelector("#tabTTBN")&&body.querySelector('input[type="file"]')){
-    return {root:body,doc:item.doc,frame:item.frame};
+    return {root:body,doc:item.doc,frame:item.frame,hostDoc};
    }
   }catch(e){}
  }
@@ -71,7 +81,7 @@ function getWorkContext(){
   try{
    const ds=$all(item.doc,'[role="dialog"],.modal.show,.modal.in,.ui-dialog,.modal-dialog,.bootbox');
    const root=ds.filter(visible).filter(el=>el.querySelector("#tabTTBN")&&el.querySelector('input[type="file"]')).sort((a,b)=>(b.innerText||"").length-(a.innerText||"").length)[0]||null;
-   if(root)return {root,doc:item.doc,frame:item.frame};
+   if(root)return {root,doc:item.doc,frame:item.frame,hostDoc};
   }catch(e){}
  }
  return null;
@@ -135,7 +145,7 @@ let session=null,expiryTimer=null,source=null,fallbackTimer=null,received=false,
 const panel=document.createElement("div");panel.id="pinkpanther-qr-panel";
 panel.style.cssText="position:fixed;z-index:2147483647;left:50%;top:42%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 28px));box-sizing:border-box;padding:16px;background:#fff1f7;border:2px solid #f9a8d4;border-radius:18px;box-shadow:0 8px 30px #83184344;color:#831843;font:14px Arial,sans-serif";
 panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px;color:#be185d">✨ QR-Scan Pink Panther</b><button id="ppclose" style="border:0;background:#fbcfe8;border-radius:9px;padding:5px 10px;cursor:pointer">✕</button></div><div id="pppatient" style="margin:8px 0;text-align:center;font-weight:bold;overflow-wrap:anywhere"></div><div id="ppmsg" style="margin:10px 0;text-align:center;line-height:1.4">Đang tạo mã QR...</div><img id="ppqr" style="display:block;width:min(220px,70vw);height:auto;aspect-ratio:1;object-fit:contain;margin:8px auto;border-radius:10px;background:white"><div style="font-size:12px;text-align:center;color:#9d174d">Quét mã bằng điện thoại để gửi ảnh ECG</div><div style="display:flex;gap:8px;margin-top:12px"><button id="ppnew" style="flex:1;background:#ec4899;color:white;border:0;border-radius:10px;padding:9px;cursor:pointer">Tạo QR mới</button><button id="pphide" style="flex:1;background:#fbcfe8;color:#831843;border:0;border-radius:10px;padding:9px;cursor:pointer">Ẩn</button></div>';
-document.body.appendChild(panel);
+(work.hostDoc||document).body.appendChild(panel);
 const $=id=>panel.querySelector("#"+id);
 $("pppatient").textContent="Bệnh nhân: "+patient;
 function setmsg(t){$("ppmsg").textContent=t;}
