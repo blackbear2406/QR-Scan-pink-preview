@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ECG Panther",
-  "version": "1.0.0",
-  "description": "Tiếp nhận ảnh ECG từ điện thoại và chuyển vào cửa sổ kết quả ECG trên VNPT-HIS.",
+  "version": "1.1.0",
+  "description": "Tự động thêm nút Quét mã QR trong cửa sổ đọc điện tim trên VNPT-HIS.",
   "permissions": [
     "activeTab",
     "scripting"
@@ -10,6 +10,14 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://bvdongthap.vncare.vn/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
   "action": {
     "default_title": "ECG Panther – Mở QR tiếp nhận ECG"
   }
