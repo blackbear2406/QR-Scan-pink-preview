@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "ECG Panther",
+  "version": "1.0.0",
+  "description": "Tiếp nhận ảnh ECG từ điện thoại và chuyển vào cửa sổ kết quả ECG trên VNPT-HIS.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "ECG Panther – Mở QR tiếp nhận ECG"
+  }
+}
