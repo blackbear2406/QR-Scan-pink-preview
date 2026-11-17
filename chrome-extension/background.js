@@ -2,6 +2,17 @@
 
 const ALLOWED_ORIGIN = "https://bvdongthap.vncare.vn";
 
+// Dấu chân hồng trên biểu tượng tiện ích Chrome.
+function setPinkPawBadge() {
+  chrome.action.setBadgeBackgroundColor({ color: "#e879a7" });
+  chrome.action.setBadgeText({ text: "🐾" });
+  chrome.action.setTitle({ title: "ECG Panther – Quét mã QR" });
+}
+
+chrome.runtime.onInstalled.addListener(setPinkPawBadge);
+chrome.runtime.onStartup.addListener(setPinkPawBadge);
+setPinkPawBadge();
+
 function getOrigin(url) {
   try { return new URL(url || "").origin; } catch (_) { return ""; }
 }
