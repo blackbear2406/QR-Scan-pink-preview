@@ -9,14 +9,15 @@ function getOrigin(url) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== "ECG_PANTHER_OPEN_QR") return;
   const tabId = sender.tab && sender.tab.id;
-  const frameId = typeof sender.frameId === "number" ? sender.frameId : 0;
   if (typeof tabId !== "number" || getOrigin(sender.url) !== ALLOWED_ORIGIN) {
     sendResponse({ ok: false, error: "Trang HIS không hợp lệ." });
     return;
   }
 
   chrome.scripting.executeScript({
-    target: { tabId, frameIds: [frameId] },
+    // Chạy từ top frame để giữ quyền truy cập jQuery/grid bệnh nhân của trang HIS cha.
+    // ecg-panther.js sẽ tự dò iframe Kết quả ECG cùng origin.
+    target: { tabId, frameIds: [0] },
     files: ["ecg-panther.js"],
     world: "MAIN"
   }).then(() => sendResponse({ ok: true })).catch((error) => {
