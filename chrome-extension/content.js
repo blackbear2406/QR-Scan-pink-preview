@@ -48,7 +48,7 @@
     button = document.createElement("button");
     button.id = BUTTON_ID;
     button.type = "button";
-    button.textContent = "⌗ Quét mã QR";
+    button.textContent = "🐾 Quét mã QR";
     button.title = "Mở mã QR để nhận ảnh ECG từ điện thoại";
     button.addEventListener("click", () => {
       if (button.disabled) return;
@@ -57,7 +57,7 @@
       chrome.runtime.sendMessage({ type: "ECG_PANTHER_OPEN_QR" }, (response) => {
         const runtimeError = chrome.runtime.lastError;
         button.disabled = false;
-        button.textContent = "⌗ Quét mã QR";
+        button.textContent = "🐾 Quét mã QR";
         if (runtimeError || !response || !response.ok) {
           console.error("ECG Panther:", runtimeError || response);
           alert("ECG Panther chưa mở được mã QR. Em thử tải lại cửa sổ ECG rồi thao tác lại nhé.");
