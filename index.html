@@ -98,7 +98,7 @@ function updateReady(){ $("send").disabled=!selectedFile||!session||sessionExpir
 // Nén bản sao dùng để truyền; giữ nguyên selectedFile và ảnh xem trước trên điện thoại.
 // Không giảm kích thước pixel để bảo toàn độ rõ của ô ECG, chữ và thông số.
 async function prepareTransferImage(file){
- if(!file||file.size<=1024*1024||!/^image\\/(jpeg|png|webp)$/i.test(file.type||""))return file;
+ if(!file||file.size<=1024*1024||!/^image\/(jpeg|png|webp)$/i.test(file.type||""))return file;
  let bitmap=null;
  try{
   bitmap=await createImageBitmap(file);
@@ -117,7 +117,7 @@ async function prepareTransferImage(file){
   }
   canvas.width=0;canvas.height=0;
   if(best&&best.size<file.size){
-   return new File([best],(file.name||"ecg").replace(/\\.[^.]+$/,"")+"_optimized.jpg",{type:"image/jpeg",lastModified:Date.now()});
+   return new File([best],(file.name||"ecg").replace(/\.[^.]+$/,"")+"_optimized.jpg",{type:"image/jpeg",lastModified:Date.now()});
   }
   return file;
  }catch(error){
