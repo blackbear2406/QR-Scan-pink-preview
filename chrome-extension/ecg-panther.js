@@ -165,7 +165,7 @@ async function start(){
    const src=data.image||data.url;let blob;if(typeof src==="string"&&src.startsWith("data:")){const comma=src.indexOf(",");if(comma<0)throw new Error("Dữ liệu ảnh không hợp lệ");const head=src.slice(0,comma),raw=atob(src.slice(comma+1)),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);const mime=(head.match(/^data:([^;]+)/)||[])[1]||"image/jpeg";blob=new Blob([bytes],{type:mime});}else{const imageResponse=await fetch(src);if(!imageResponse.ok)throw new Error("Không tải được ảnh từ Firebase ("+imageResponse.status+")");blob=await imageResponse.blob();}
    // Light JPEG compression at original dimensions; fall back to original if not smaller.
    let uploadBlob=blob;
-   if(blob.size>1024*1024&&/^image\/(jpeg|png|webp)$/i.test(blob.type||"")){
+   if(blob.size>1024*1024&&!(data.clientTiming&&data.clientTiming.compressed===true)&&/^image\/(jpeg|png|webp)$/i.test(blob.type||"")){
     try{
      const bitmap=await createImageBitmap(blob);
      const canvas=document.createElement("canvas");
